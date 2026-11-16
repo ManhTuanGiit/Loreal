@@ -542,7 +542,7 @@
         const hash = exploreLink.hash;
         const target = document.querySelector(hash);
         const distance = target.getBoundingClientRect().top - header.offsetHeight;
-        const duration = 3400;
+        const duration = 6000;
         if (location.hash !== hash) history.pushState(history.state, '', hash);
 
         let startedAt;
