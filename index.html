@@ -270,7 +270,7 @@
     <section class="story" aria-labelledby="details-heading">
       <div class="story-card">
       <p class="eyebrow">Thông tin sản phẩm</p>
-      <h2 id="details-heading">Kết cấu lỏng nhẹ</h2>
+      <h2 id="details-heading" tabindex="-1">Kết cấu lỏng nhẹ</h2>
       <p class="story-copy">Dòng Invisible Fluid có kết cấu serum lỏng, được giới thiệu trên bao bì với lớp hoàn thiện ráo, không bóng và không bết dính.</p>
       <dl class="facts">
         <div><dt>Chỉ số chống nắng</dt><dd>SPF 50+</dd></div>
@@ -405,6 +405,7 @@
       let manualYaw = 0;
       let frame = 0;
       let lastDraw = 0;
+      let exploreScrollFrame = 0;
       let pointer = null;
       let compactMobile = false;
 
@@ -490,6 +491,7 @@
         requestDraw();
       }
       function configureMotion() {
+        stopExploreScroll();
         const enabled = !reducedMotion.matches && !shortScreen.matches;
         experience.dataset.motion = enabled ? 'on' : 'off';
         progressBar.toggleAttribute('data-active', enabled);
@@ -526,6 +528,44 @@
         camera.updateProjectionMatrix();
         readScroll();
       }
+
+      function stopExploreScroll() {
+        cancelAnimationFrame(exploreScrollFrame);
+        exploreScrollFrame = 0;
+      }
+      exploreLink.addEventListener('click', (event) => {
+        if (!motionIsOn() || reducedMotion.matches || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+        event.preventDefault();
+        stopExploreScroll();
+        const start = window.scrollY;
+        const hash = exploreLink.hash;
+        const target = document.querySelector(hash);
+        const distance = target.getBoundingClientRect().top - header.offsetHeight;
+        const duration = 3400;
+        if (location.hash !== hash) history.pushState(history.state, '', hash);
+
+        let startedAt;
+        function scrollToDetails(now) {
+          startedAt ??= now;
+          const elapsed = Math.min((now - startedAt) / duration, 1);
+          const position = start + distance * smooth(elapsed, 0, 1);
+          window.scrollTo({ top: position, behavior: 'instant' });
+          if (elapsed < 1) {
+            exploreScrollFrame = requestAnimationFrame(scrollToDetails);
+          } else {
+            exploreScrollFrame = 0;
+            if (event.detail === 0) story.querySelector('h2').focus({ preventScroll: true });
+          }
+        }
+        exploreScrollFrame = requestAnimationFrame(scrollToDetails);
+      });
+      addEventListener('wheel', stopExploreScroll, { passive: true });
+      addEventListener('pointerdown', stopExploreScroll, { passive: true });
+      addEventListener('popstate', stopExploreScroll);
+      addEventListener('keydown', (event) => {
+        if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ', 'Escape', 'Tab'].includes(event.key)) stopExploreScroll();
+      });
 
       canvas.addEventListener('pointerdown', (event) => {
         if (!event.isPrimary || event.button !== 0) return;
